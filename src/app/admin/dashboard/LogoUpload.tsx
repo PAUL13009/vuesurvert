@@ -22,14 +22,17 @@ export default function LogoUpload() {
           .from("site_config")
           .select("value")
           .eq("key", "logo_url")
-          .single();
+          .maybeSingle(); // Utiliser maybeSingle() au lieu de single() pour éviter les erreurs si la table n'existe pas
 
         if (!error && data) {
           setLogoUrl(data.value);
           setPreview(data.value);
         }
-      } catch (err) {
-        console.error("Erreur lors du chargement du logo:", err);
+      } catch (err: any) {
+        // Ne pas logger l'erreur si c'est juste que la table n'existe pas encore
+        if (err?.code !== "42P01") { // 42P01 = relation does not exist
+          console.error("Erreur lors du chargement du logo:", err);
+        }
       } finally {
         setLoading(false);
       }
