@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import Logo from "./Logo";
 
 export default function Footer() {
   const year = new Date().getFullYear();
@@ -9,13 +9,7 @@ export default function Footer() {
         <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
           <p>© {year} Vue Sur Vert. Tous droits réservés.</p>
           <div className="flex items-center justify-center">
-            <Image
-              src="/logo.png"
-              alt="Vue Sur Vert"
-              width={150}
-              height={112}
-              className="object-contain"
-            />
+            <Logo width={150} height={112} />
           </div>
           <div className="flex gap-4">
             <a href="#" className="hover:text-emerald-600 transition-colors" aria-label="Instagram">Instagram</a>

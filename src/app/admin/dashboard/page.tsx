@@ -9,10 +9,11 @@ import ArticleForm, { type Article } from "./ArticleForm";
 import ArticleList from "./ArticleList";
 import CollaboratorForm, { type Collaborator } from "./CollaboratorForm";
 import CollaboratorList from "./CollaboratorList";
+import LogoUpload from "./LogoUpload";
 import type { Property } from "@/components/PropertyCard";
 import { deleteProperty } from "./actions";
 
-type TabType = "annonces" | "articles" | "collaborateurs" | "trafic";
+type TabType = "annonces" | "articles" | "collaborateurs" | "trafic" | "logo";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -428,6 +429,10 @@ export default function DashboardPage() {
               </>
             )}
           </div>
+        )}
+
+        {activeTab === "logo" && (
+          <LogoUpload />
         )}
 
         {activeTab === "trafic" && (

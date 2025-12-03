@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
+import LogoClient from "./LogoClient";
 
 export default function Header() {
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
@@ -32,14 +32,7 @@ export default function Header() {
           <Link href="/" className="flex flex-col items-center gap-2">
             {/* Logo image */}
             <div className="flex items-center justify-center">
-              <Image
-                src="/logo.png"
-                alt="Vue Sur Vert"
-                width={200}
-                height={150}
-                className="object-contain"
-                priority
-              />
+              <LogoClient width={200} height={150} />
             </div>
           </Link>
         </div>
