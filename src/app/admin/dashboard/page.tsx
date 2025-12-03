@@ -275,6 +275,7 @@ export default function DashboardPage() {
     { id: "annonces" as TabType, label: "Gestion des annonces" },
     { id: "articles" as TabType, label: "Ajout d'articles" },
     { id: "collaborateurs" as TabType, label: "Ajout de collaborateur" },
+    { id: "logo" as TabType, label: "Modification du logo" },
     { id: "trafic" as TabType, label: "Visibilité et Trafic" },
   ];
 
