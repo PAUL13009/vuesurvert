@@ -3,7 +3,49 @@
 import { revalidatePath } from "next/cache";
 import { supabaseServer } from "@/lib/supabase/server";
 
-export async function createProperty(formData: FormData) {
+// Type pour le payload complet d'une propriété
+export type PropertyPayload = {
+  title: string;
+  price: number;
+  location: string;
+  image: string;
+  beds: number;
+  baths: number;
+  area: number;
+  description?: string;
+  photos?: string[];
+  photo_principale?: string;
+  status?: "a_vendre" | "vendu" | "sous_compromis";
+  prestations?: {
+    parking?: number;
+    ascenseur?: boolean;
+    balcon?: boolean;
+    terrasse?: boolean;
+    cave?: boolean;
+    garage?: number;
+    piscine?: boolean;
+    jardin?: boolean;
+    climatisation?: boolean;
+    chauffage?: "individuel" | "collectif" | "electrique" | "gaz" | "autre";
+    internet?: boolean;
+    fibre?: boolean;
+    interphone?: boolean;
+    digicode?: boolean;
+    gardien?: boolean;
+    local_velo?: boolean;
+    autres?: string;
+  };
+  surface_totale?: number;
+  surface_terrasse?: number;
+  surface_balcon?: number;
+  surface_cave?: number;
+  surface_garage?: number;
+  surface_jardin?: number;
+  dpe_consommation?: "A" | "B" | "C" | "D" | "E" | "F" | "G";
+  dpe_ges?: "A" | "B" | "C" | "D" | "E" | "F" | "G";
+};
+
+export async function createProperty(payload: PropertyPayload) {
   try {
     const supabase = await supabaseServer();
     const { data: auth, error: authError } = await supabase.auth.getUser();
@@ -11,46 +53,31 @@ export async function createProperty(formData: FormData) {
       return { success: false, error: "Non authentifié" };
     }
 
-    const payload = {
-      title: String(formData.get("title") || ""),
-      price: Number(formData.get("price") || 0),
-      location: String(formData.get("location") || ""),
-      image: String(formData.get("image") || ""),
-      beds: Number(formData.get("beds") || 0),
-      baths: Number(formData.get("baths") || 0),
-      area: Number(formData.get("area") || 0),
-    };
+    const { data, error } = await supabase
+      .from("properties")
+      .insert(payload)
+      .select()
+      .single();
 
-    const { error } = await supabase.from("properties").insert(payload);
     if (error) {
       return { success: false, error: error.message };
     }
 
     revalidatePath("/");
     revalidatePath("/admin/dashboard");
-    return { success: true };
+    return { success: true, data };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Erreur inconnue" };
   }
 }
 
-export async function updateProperty(id: string, formData: FormData) {
+export async function updateProperty(id: string, payload: PropertyPayload) {
   try {
     const supabase = await supabaseServer();
     const { data: auth, error: authError } = await supabase.auth.getUser();
     if (authError || !auth?.user) {
       return { success: false, error: "Non authentifié" };
     }
-
-    const payload = {
-      title: String(formData.get("title") || ""),
-      price: Number(formData.get("price") || 0),
-      location: String(formData.get("location") || ""),
-      image: String(formData.get("image") || ""),
-      beds: Number(formData.get("beds") || 0),
-      baths: Number(formData.get("baths") || 0),
-      area: Number(formData.get("area") || 0),
-    };
 
     const { error } = await supabase.from("properties").update(payload).eq("id", id);
     if (error) {
@@ -59,6 +86,7 @@ export async function updateProperty(id: string, formData: FormData) {
 
     revalidatePath("/");
     revalidatePath("/admin/dashboard");
+    revalidatePath(`/biens/${id}`);
     return { success: true };
   } catch (err) {
     return { success: false, error: err instanceof Error ? err.message : "Erreur inconnue" };

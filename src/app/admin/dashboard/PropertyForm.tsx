@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase/client";
 import PhotoUpload from "./PhotoUpload";
 import type { Property } from "@/components/PropertyCard";
+import { createProperty, updateProperty, type PropertyPayload } from "./actions";
 
 interface PropertyFormProps {
   property?: Property | null;
@@ -293,32 +294,49 @@ export default function PropertyForm({ property, onSuccess, onCancel }: Property
         payload.dpe_ges = dpe.dpe_ges;
       }
 
+      // Construire le payload complet pour la server action
+      const propertyPayload: PropertyPayload = {
+        title: payload.title,
+        price: payload.price,
+        location: payload.location,
+        image: payload.image,
+        beds: payload.beds,
+        baths: payload.baths,
+        area: payload.area,
+        status: payload.status,
+        prestations: payload.prestations,
+        description: payload.description,
+        photos: payload.photos,
+        photo_principale: payload.photo_principale,
+        surface_totale: payload.surface_totale,
+        surface_terrasse: payload.surface_terrasse,
+        surface_balcon: payload.surface_balcon,
+        surface_cave: payload.surface_cave,
+        surface_garage: payload.surface_garage,
+        surface_jardin: payload.surface_jardin,
+        dpe_consommation: payload.dpe_consommation,
+        dpe_ges: payload.dpe_ges,
+      };
+
       if (property) {
-        // Update
-        const { error } = await supabase
-          .from("properties")
-          .update(payload)
-          .eq("id", property.id);
-        if (error) {
-          console.error("Supabase update error:", error);
-          throw new Error(error.message || "Erreur lors de la mise à jour");
+        // Update via server action
+        const result = await updateProperty(property.id, propertyPayload);
+        if (!result.success) {
+          throw new Error(result.error || "Erreur lors de la mise à jour");
         }
       } else {
-        // Create
-        const { data, error } = await supabase
-          .from("properties")
-          .insert(payload)
-          .select()
-          .single();
-        if (error) {
-          console.error("Supabase insert error:", error);
-          throw new Error(error.message || "Erreur lors de la création");
+        // Create via server action
+        const result = await createProperty(propertyPayload);
+        if (!result.success) {
+          throw new Error(result.error || "Erreur lors de la création");
         }
         
         // Si on a créé une nouvelle propriété et qu'il y a des photos à uploader, les ré-uploader avec le bon ID
-        if (uploadPhotosRef.current && data && finalPhotos.length > 0) {
+        if (uploadPhotosRef.current && result.data && finalPhotos.length > 0) {
           try {
-            await uploadPhotosRef.current(data.id);
+            await uploadPhotosRef.current(result.data.id);
+            // Revalider après l'upload des photos
+            router.refresh();
           } catch (uploadError) {
             console.error("Photo re-upload error:", uploadError);
           }
