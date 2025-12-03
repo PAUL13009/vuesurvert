@@ -67,12 +67,6 @@ export default function Header() {
           >
             CONTACT
           </a>
-          <Link 
-            href="/blog"
-            className="text-base text-black hover:text-zinc-700 transition-colors"
-          >
-            BLOG
-          </Link>
         </nav>
       </div>
     </header>

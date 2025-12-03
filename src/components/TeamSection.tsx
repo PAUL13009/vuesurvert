@@ -37,6 +37,36 @@ export default function TeamSection() {
         </div>
 
         <Testimonials />
+
+        {/* Section Blog */}
+        <div className="mt-16 max-w-3xl mx-auto">
+          <h3 className="text-2xl font-medium tracking-tight text-zinc-900 mb-6">Articles</h3>
+          
+          {/* Texte de présentation */}
+          <div className="mb-8">
+            <p className="text-base text-zinc-700 leading-relaxed mb-4">
+              Découvrez nos articles sur l'immobilier écologique, la rénovation durable, les projets de construction responsable et bien plus encore.
+            </p>
+            <p className="text-base text-zinc-700 leading-relaxed">
+              Retrouvez des témoignages de projets, des conseils pratiques, des retours d'expérience sur des chantiers écologiques et des informations sur les dispositifs d'aide à l'accession immobilière.
+            </p>
+          </div>
+
+          {/* Bouton CTA */}
+          <div className="flex justify-center">
+            <a
+              href="https://vuesurvert.com/category/articles/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block rounded-md px-6 py-3 text-base font-semibold text-white transition-colors hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2"
+              style={{ backgroundColor: "#00E09E" }}
+              onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#00C08A"}
+              onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#00E09E"}
+            >
+              Découvrir tous les articles
+            </a>
+          </div>
+        </div>
       </div>
     </section>
   );
