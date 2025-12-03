@@ -1,0 +1,37 @@
+<svg width="120" height="80" viewBox="0 0 120 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Forme teal irrégulière (feuille/cluster) derrière et à gauche -->
+  <path d="M8 50 Q5 40 12 35 Q20 30 25 35 Q30 40 28 50 Q25 58 15 55 Q8 55 8 50 Z" fill="#7DD3FC" stroke="none"/>
+  
+  <!-- Bâtiments en contours noirs avec hauteurs variées -->
+  <rect x="20" y="45" width="10" height="20" fill="none" stroke="#171717" stroke-width="1.5"/>
+  <rect x="23" y="48" width="2" height="2" fill="#171717"/>
+  <rect x="26" y="48" width="2" height="2" fill="#171717"/>
+  
+  <rect x="35" y="40" width="10" height="25" fill="none" stroke="#171717" stroke-width="1.5"/>
+  <rect x="38" y="43" width="2" height="2" fill="#171717"/>
+  <rect x="41" y="43" width="2" height="2" fill="#171717"/>
+  
+  <rect x="50" y="42" width="10" height="23" fill="none" stroke="#171717" stroke-width="1.5"/>
+  <rect x="53" y="45" width="2" height="2" fill="#171717"/>
+  <rect x="56" y="45" width="2" height="2" fill="#171717"/>
+  
+  <rect x="65" y="38" width="10" height="27" fill="none" stroke="#171717" stroke-width="1.5"/>
+  <rect x="68" y="41" width="2" height="2" fill="#171717"/>
+  <rect x="71" y="41" width="2" height="2" fill="#171717"/>
+  
+  <rect x="80" y="41" width="10" height="24" fill="none" stroke="#171717" stroke-width="1.5"/>
+  <rect x="83" y="44" width="2" height="2" fill="#171717"/>
+  <rect x="86" y="44" width="2" height="2" fill="#171717"/>
+  
+  <!-- Arbre teal solide devant les bâtiments (cercle avec tronc) -->
+  <circle cx="48" cy="32" r="7" fill="#7DD3FC" stroke="none"/>
+  <path d="M48 39 L48 65" stroke="#171717" stroke-width="1.5" fill="none"/>
+  
+  <!-- Arbre teal solide à droite (cercle avec tronc) -->
+  <circle cx="95" cy="28" r="7" fill="#7DD3FC" stroke="none"/>
+  <path d="M95 35 L95 65" stroke="#171717" stroke-width="1.5" fill="none"/>
+  
+  <!-- Soleil en haut à droite avec 4 rayons -->
+  <circle cx="105" cy="15" r="5" fill="none" stroke="#171717" stroke-width="1.5"/>
+  <path d="M105 7 L105 9 M105 21 L105 23 M113 15 L115 15 M95 15 L97 15" stroke="#171717" stroke-width="1.5"/>
+</svg>
