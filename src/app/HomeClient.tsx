@@ -36,7 +36,7 @@ export default function HomeClient({ properties, collaborators = [] }: HomeClien
         <PropertyGrid properties={properties} filters={filters} />
       </FadeInSection>
       <FadeInSection delay={100}>
-        <TeamSection collaborators={collaborators} />
+        <TeamSection />
       </FadeInSection>
       <FadeInSection delay={200}>
         <ContactSection />
