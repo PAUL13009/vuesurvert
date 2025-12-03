@@ -10,6 +10,7 @@ import ArticleList from "./ArticleList";
 import CollaboratorForm, { type Collaborator } from "./CollaboratorForm";
 import CollaboratorList from "./CollaboratorList";
 import type { Property } from "@/components/PropertyCard";
+import { deleteProperty } from "./actions";
 
 type TabType = "annonces" | "articles" | "collaborateurs" | "trafic";
 
@@ -87,25 +88,15 @@ export default function DashboardPage() {
       return;
     }
 
-    const supabase = supabaseBrowser();
-    const { data: { user } } = await supabase.auth.getUser();
-
-    if (!user) {
-      alert("Non authentifié. Veuillez vous reconnecter.");
-      return;
-    }
-
     try {
-      const { error } = await supabase
-        .from("properties")
-        .delete()
-        .eq("id", id);
+      const result = await deleteProperty(id);
 
-      if (error) {
-        alert(error.message);
+      if (!result.success) {
+        alert(result.error || "Erreur lors de la suppression");
         return;
       }
 
+      // Revalider le cache et mettre à jour l'interface
       router.refresh();
       await fetchProperties();
     } catch (err) {
