@@ -17,11 +17,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Vue Sur Vert",
   description: "Immobilier d'exception au vert",
-  icons: {
-    icon: "/favicon.png",
-    shortcut: "/favicon.png",
-    apple: "/favicon.png",
-  },
 };
 
 export default function RootLayout({
