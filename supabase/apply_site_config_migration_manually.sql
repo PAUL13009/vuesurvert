@@ -1,14 +1,6 @@
 -- Migration pour créer la table site_config
 -- À exécuter dans Supabase Dashboard → SQL Editor
 
--- Supprimer les éléments existants si nécessaire (pour éviter les erreurs)
-drop policy if exists "site_config_select_all" on public.site_config;
-drop policy if exists "site_config_insert_authenticated" on public.site_config;
-drop policy if exists "site_config_update_authenticated" on public.site_config;
-drop policy if exists "site_config_delete_authenticated" on public.site_config;
-drop trigger if exists update_site_config_updated_at on public.site_config;
-drop function if exists update_site_config_updated_at();
-
 -- Créer la table site_config pour stocker les configurations du site
 create table if not exists public.site_config (
   id uuid primary key default gen_random_uuid(),
@@ -20,6 +12,15 @@ create table if not exists public.site_config (
 
 -- Activer Row Level Security
 alter table public.site_config enable row level security;
+
+-- Supprimer les policies existantes si elles existent (pour éviter les erreurs en cas de ré-exécution)
+do $$
+begin
+  drop policy if exists "site_config_select_all" on public.site_config;
+  drop policy if exists "site_config_insert_authenticated" on public.site_config;
+  drop policy if exists "site_config_update_authenticated" on public.site_config;
+  drop policy if exists "site_config_delete_authenticated" on public.site_config;
+end $$;
 
 -- Policy: Allow public read access
 create policy "site_config_select_all" on public.site_config
@@ -46,6 +47,10 @@ begin
 end;
 $$ language plpgsql;
 
+-- Supprimer le trigger existant s'il existe
+drop trigger if exists update_site_config_updated_at on public.site_config;
+
+-- Créer le trigger
 create trigger update_site_config_updated_at
 before update on public.site_config
 for each row
