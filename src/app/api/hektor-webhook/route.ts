@@ -42,7 +42,6 @@ export async function POST(request: NextRequest) {
       ignoreAttributes: false,
       attributeNamePrefix: '',
       textNodeName: '_text',
-      ignoreNameSpace: false,
       removeNSPrefix: false,
       parseTagValue: true,
       parseNodeValue: true,
