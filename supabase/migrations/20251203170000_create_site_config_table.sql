@@ -45,3 +45,6 @@ insert into public.site_config (key, value)
 values ('logo_url', '/logo.png')
 on conflict (key) do nothing;
 
+
+
+
