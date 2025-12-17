@@ -59,8 +59,31 @@ export async function POST(request: NextRequest) {
         valueProcessors: []
       });
     } catch (parseError) {
-      console.error('Erreur de parsing XML:', parseError);
-      return NextResponse.json({ error: 'Invalid Hektor XML format' }, { status: 400 });
+      console.error('Erreur parsing XML:', parseError);
+      // Log les lignes autour de l'erreur pour debug
+      const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown parse error';
+      const lineMatch = errorMsg.match(/Line:\s*(\d+)/);
+      const colMatch = errorMsg.match(/Column:\s*(\d+)/);
+      
+      let preview = cleanedXml.substring(0, 1000);
+      if (lineMatch) {
+        const lineNum = parseInt(lineMatch[1]);
+        const lines = cleanedXml.split('\n');
+        const start = Math.max(0, lineNum - 3);
+        const end = Math.min(lines.length, lineNum + 3);
+        preview = lines.slice(start, end).join('\n');
+      }
+      
+      console.error('Preview XML autour de l\'erreur:', preview);
+      return NextResponse.json(
+        { 
+          error: 'XML parsing failed', 
+          details: errorMsg,
+          preview: preview,
+          xmlLength: cleanedXml.length
+        }, 
+        { status: 400 }
+      );
     }
     
     if (!parsed.hektor || !parsed.hektor.ad) {
