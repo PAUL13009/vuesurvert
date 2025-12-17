@@ -76,7 +76,7 @@ async function sendToVercel(xmlPath: string): Promise<void> {
       body: formData
     });
 
-    const result = await response.json();
+    const result: any = await response.json();
 
     if (!response.ok) {
       throw new Error(`Vercel API error: ${JSON.stringify(result)}`);
