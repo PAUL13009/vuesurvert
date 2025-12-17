@@ -4,7 +4,6 @@ import { readFile, rename, mkdir } from 'fs/promises';
 import { createReadStream, createWriteStream } from 'fs'; // IMPORTANT: depuis 'fs', pas 'fs/promises'
 import { join } from 'path';
 import yauzl from 'yauzl';
-import FormData from 'form-data';
 import fetch from 'node-fetch';
 
 const WATCH_DIR = '/home/hektor_ftp/xml_uploads';
