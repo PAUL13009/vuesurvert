@@ -29,24 +29,28 @@ export async function POST(request: NextRequest) {
       .replace(/\\"/g, '"')
       .replace(/\\'/g, "'")
       .replace(/\\>/g, '>')
-      .replace(/\\</g, '<')
-      // Déséchapper les entités HTML communes (dans l'ordre inverse pour éviter les conflits)
-      // D'abord les entités triplement échappées
-      .replace(/&amp;amp;quot;/g, '"')
-      .replace(/&amp;amp;gt;/g, '>')
-      .replace(/&amp;amp;lt;/g, '<')
-      .replace(/&amp;amp;amp;/g, '&')
-      // Ensuite les entités doublement échappées
-      .replace(/&amp;quot;/g, '"')
-      .replace(/&amp;gt;/g, '>')
-      .replace(/&amp;lt;/g, '<')
-      .replace(/&amp;amp;/g, '&')
-      // Ensuite les entités simplement échappées
-      .replace(/&quot;/g, '"')
-      .replace(/&gt;/g, '>')
-      .replace(/&lt;/g, '<')
-      // Échapper uniquement les & non échappés restants (pas dans les entités valides)
-      .replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;');
+      .replace(/\\</g, '<');
+    
+    // Déséchapper les entités HTML communes de manière répétée jusqu'à ce qu'il n'y en ait plus
+    let previousLength = 0;
+    while (cleanedXml.length !== previousLength) {
+      previousLength = cleanedXml.length;
+      cleanedXml = cleanedXml
+        .replace(/&amp;amp;quot;/g, '"')
+        .replace(/&amp;amp;gt;/g, '>')
+        .replace(/&amp;amp;lt;/g, '<')
+        .replace(/&amp;amp;amp;/g, '&')
+        .replace(/&amp;quot;/g, '"')
+        .replace(/&amp;gt;/g, '>')
+        .replace(/&amp;lt;/g, '<')
+        .replace(/&amp;amp;/g, '&')
+        .replace(/&quot;/g, '"')
+        .replace(/&gt;/g, '>')
+        .replace(/&lt;/g, '<');
+    }
+    
+    // Échapper uniquement les & non échappés restants (pas dans les entités valides)
+    cleanedXml = cleanedXml.replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;');
     
     // Parser le XML Hektor avec gestion d'erreur améliorée
     let parsed;
