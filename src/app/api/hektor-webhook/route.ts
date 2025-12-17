@@ -21,21 +21,42 @@ export async function POST(request: NextRequest) {
 
     const xmlContent = await xmlFile.text();
     
-    // Nettoyer le XML (supprimer les caractères problématiques et échapper les & non échappés)
-    const cleanedXml = xmlContent
-      .replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;') // Échapper les & non échappés
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''); // Supprimer les caractères de contrôle
+    // Nettoyer le XML de manière plus agressive
+    let cleanedXml = xmlContent
+      // Échapper les & non échappés d'abord
+      .replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;')
+      // Supprimer les caractères de contrôle
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
     
-    // Parser le XML Hektor avec options améliorées
-    const parsed = await parseStringPromise(cleanedXml, {
-      explicitArray: true,
-      mergeAttrs: true,
-      trim: true,
-      normalize: true,
-      explicitCharkey: false,
-      ignoreAttrs: false,
-      explicitRoot: true
-    });
+    // Parser le XML Hektor avec gestion d'erreur améliorée
+    let parsed;
+    try {
+      parsed = await parseStringPromise(cleanedXml, {
+        explicitArray: true,
+        mergeAttrs: true,
+        trim: true,
+        normalize: true,
+        explicitCharkey: false,
+        ignoreAttrs: false,
+        explicitRoot: true,
+        attrkey: '_',
+        charkey: '_'
+      });
+    } catch (parseError) {
+      console.error('Erreur parsing XML:', parseError);
+      // Log les premières lignes du XML pour debug
+      const preview = cleanedXml.substring(0, 500);
+      console.error('Preview XML:', preview);
+      return NextResponse.json(
+        { 
+          error: 'XML parsing failed', 
+          details: parseError instanceof Error ? parseError.message : 'Unknown parse error',
+          preview: preview,
+          xmlLength: cleanedXml.length
+        }, 
+        { status: 400 }
+      );
+    }
     
     if (!parsed.hektor || !parsed.hektor.ad) {
       return NextResponse.json({ error: 'Invalid Hektor XML format' }, { status: 400 });
