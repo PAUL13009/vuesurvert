@@ -21,12 +21,29 @@ export async function POST(request: NextRequest) {
 
     const xmlContent = await xmlFile.text();
     
-    // Nettoyer le XML de manière plus agressive
+    // Nettoyer le XML de manière très agressive pour éviter les erreurs de parsing
     let cleanedXml = xmlContent
-      // Échapper les & non échappés d'abord
+      // Supprimer les caractères de contrôle d'abord
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+      // Nettoyer les entités XML mal formées dans les attributs
+      .replace(/<(\w+)([^>]*?)([^a-zA-Z0-9_\-:])="([^"]*)"/g, (match, tag, attrs, invalidChar, value) => {
+        // Si un caractère invalide est trouvé avant le =, nettoyer
+        if (invalidChar && invalidChar !== '=' && invalidChar !== ' ') {
+          return `<${tag}${attrs}="${value.replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;')}"`;
+        }
+        return match;
+      })
+      // Échapper les & non échappés dans le contenu (pas dans les attributs)
       .replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;')
-      // Supprimer les caractères de contrôle
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+      // Nettoyer les attributs avec des valeurs contenant des caractères problématiques
+      .replace(/="([^"]*[<>&"'][^"]*)"/g, (match, value) => {
+        const cleaned = value
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&apos;');
+        return `="${cleaned}"`;
+      });
     
     // Parser le XML Hektor avec gestion d'erreur améliorée
     let parsed;
@@ -40,17 +57,35 @@ export async function POST(request: NextRequest) {
         ignoreAttrs: false,
         explicitRoot: true,
         attrkey: '_',
-        charkey: '_'
+        charkey: '_',
+        // Options supplémentaires pour plus de tolérance
+        async: false,
+        attrNameProcessors: [],
+        attrValueProcessors: [],
+        tagNameProcessors: [],
+        valueProcessors: []
       });
     } catch (parseError) {
       console.error('Erreur parsing XML:', parseError);
-      // Log les premières lignes du XML pour debug
-      const preview = cleanedXml.substring(0, 500);
-      console.error('Preview XML:', preview);
+      // Log les lignes autour de l'erreur pour debug
+      const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown parse error';
+      const lineMatch = errorMsg.match(/Line:\s*(\d+)/);
+      const colMatch = errorMsg.match(/Column:\s*(\d+)/);
+      
+      let preview = cleanedXml.substring(0, 1000);
+      if (lineMatch) {
+        const lineNum = parseInt(lineMatch[1]);
+        const lines = cleanedXml.split('\n');
+        const start = Math.max(0, lineNum - 3);
+        const end = Math.min(lines.length, lineNum + 3);
+        preview = lines.slice(start, end).join('\n');
+      }
+      
+      console.error('Preview XML autour de l\'erreur:', preview);
       return NextResponse.json(
         { 
           error: 'XML parsing failed', 
-          details: parseError instanceof Error ? parseError.message : 'Unknown parse error',
+          details: errorMsg,
           preview: preview,
           xmlLength: cleanedXml.length
         }, 
