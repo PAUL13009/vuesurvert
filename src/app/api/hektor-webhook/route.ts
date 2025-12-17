@@ -42,15 +42,11 @@ export async function POST(request: NextRequest) {
       ignoreAttributes: false,
       attributeNamePrefix: '',
       textNodeName: '_text',
-      removeNSPrefix: false,
       parseTagValue: true,
-      parseNodeValue: true,
       parseTrueNumberOnly: false,
-      arrayMode: false,
       trimValues: true,
       processEntities: true, // Important : traite les entités automatiquement
       htmlEntities: true, // Traite les entités HTML
-      alwaysCreateTextNode: false,
       isArray: (name, jPath, isLeafNode, isAttribute) => {
         // Retourner true pour les éléments qui doivent être des tableaux
         if (name === 'ad') return true;
