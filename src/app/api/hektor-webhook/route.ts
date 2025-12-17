@@ -21,16 +21,21 @@ export async function POST(request: NextRequest) {
 
     const xmlContent = await xmlFile.text();
     
-    // Nettoyer le XML de manière plus simple et robuste
+    // Nettoyer le XML de manière plus agressive pour déséchapper les entités
     let cleanedXml = xmlContent
       // Supprimer les caractères de contrôle d'abord
       .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-      // Déséchapper les entités HTML communes si elles sont doublement échappées (cas rare)
-      .replace(/&amp;quot;/g, '&quot;')
-      .replace(/&amp;gt;/g, '&gt;')
-      .replace(/&amp;lt;/g, '&lt;')
-      .replace(/&amp;amp;/g, '&amp;')
-      // Échapper uniquement les & non échappés dans le contenu (pas dans les attributs)
+      // Déséchapper les entités HTML communes (dans l'ordre inverse pour éviter les conflits)
+      // D'abord les entités doublement échappées
+      .replace(/&amp;quot;/g, '"')
+      .replace(/&amp;gt;/g, '>')
+      .replace(/&amp;lt;/g, '<')
+      .replace(/&amp;amp;/g, '&')
+      // Ensuite les entités simplement échappées
+      .replace(/&quot;/g, '"')
+      .replace(/&gt;/g, '>')
+      .replace(/&lt;/g, '<')
+      // Échapper uniquement les & non échappés restants (pas dans les entités valides)
       .replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;');
     
     // Parser le XML Hektor avec gestion d'erreur améliorée
