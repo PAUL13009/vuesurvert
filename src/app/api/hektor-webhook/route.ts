@@ -43,7 +43,6 @@ export async function POST(request: NextRequest) {
       attributeNamePrefix: '',
       textNodeName: '_text',
       parseTagValue: true,
-      parseTrueNumberOnly: false,
       trimValues: true,
       processEntities: true, // Important : traite les entités automatiquement
       htmlEntities: true, // Traite les entités HTML
