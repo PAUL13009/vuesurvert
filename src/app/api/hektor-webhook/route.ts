@@ -12,14 +12,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const formData = await request.formData();
-    const xmlFile = formData.get('xml') as File;
+    // Accepter le XML directement dans le body (texte brut) ou via FormData pour compatibilité
+    let xmlContent: string;
     
-    if (!xmlFile) {
-      return NextResponse.json({ error: 'No XML file provided' }, { status: 400 });
+    const contentType = request.headers.get('content-type') || '';
+    
+    if (contentType.includes('application/xml') || contentType.includes('text/xml')) {
+      // XML envoyé directement dans le body en texte brut
+      xmlContent = await request.text();
+    } else {
+      // Fallback sur FormData pour compatibilité
+      const formData = await request.formData();
+      const xmlFile = formData.get('xml') as File;
+      
+      if (!xmlFile) {
+        return NextResponse.json({ error: 'No XML file provided' }, { status: 400 });
+      }
+      
+      xmlContent = await xmlFile.text();
     }
-
-    const xmlContent = await xmlFile.text();
+    
+    if (!xmlContent || xmlContent.trim().length === 0) {
+      return NextResponse.json({ error: 'Empty XML content' }, { status: 400 });
+    }
     
     // Nettoyer le XML de manière très agressive pour déséchapper toutes les entités
     let cleanedXml = xmlContent

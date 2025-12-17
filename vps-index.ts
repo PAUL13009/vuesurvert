@@ -61,19 +61,14 @@ async function sendToVercel(xmlPath: string): Promise<void> {
   try {
     const xmlContent = await readFile(xmlPath, 'utf-8');
     
-    const formData = new FormData();
-    formData.append('xml', xmlContent, {
-      filename: 'hektor.xml',
-      contentType: 'application/xml'
-    });
-
+    // Envoyer le XML en texte brut au lieu de FormData pour éviter l'échappement
     const response = await fetch(WEBHOOK_URL!, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${WEBHOOK_SECRET}`,
-        ...formData.getHeaders()
+        'Content-Type': 'application/xml; charset=utf-8'
       },
-      body: formData
+      body: xmlContent
     });
 
     const result: any = await response.json();
