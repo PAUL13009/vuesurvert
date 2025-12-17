@@ -21,10 +21,20 @@ export async function POST(request: NextRequest) {
 
     const xmlContent = await xmlFile.text();
     
-    // Parser le XML Hektor
-    const parsed = await parseStringPromise(xmlContent, {
+    // Nettoyer le XML (supprimer les caractères problématiques et échapper les & non échappés)
+    const cleanedXml = xmlContent
+      .replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;') // Échapper les & non échappés
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, ''); // Supprimer les caractères de contrôle
+    
+    // Parser le XML Hektor avec options améliorées
+    const parsed = await parseStringPromise(cleanedXml, {
       explicitArray: true,
-      mergeAttrs: true
+      mergeAttrs: true,
+      trim: true,
+      normalize: true,
+      explicitCharkey: false,
+      ignoreAttrs: false,
+      explicitRoot: true
     });
     
     if (!parsed.hektor || !parsed.hektor.ad) {
