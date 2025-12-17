@@ -21,29 +21,17 @@ export async function POST(request: NextRequest) {
 
     const xmlContent = await xmlFile.text();
     
-    // Nettoyer le XML de manière très agressive pour éviter les erreurs de parsing
+    // Nettoyer le XML de manière plus simple et robuste
     let cleanedXml = xmlContent
       // Supprimer les caractères de contrôle d'abord
       .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-      // Nettoyer les entités XML mal formées dans les attributs
-      .replace(/<(\w+)([^>]*?)([^a-zA-Z0-9_\-:])="([^"]*)"/g, (match, tag, attrs, invalidChar, value) => {
-        // Si un caractère invalide est trouvé avant le =, nettoyer
-        if (invalidChar && invalidChar !== '=' && invalidChar !== ' ') {
-          return `<${tag}${attrs}="${value.replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;')}"`;
-        }
-        return match;
-      })
-      // Échapper les & non échappés dans le contenu (pas dans les attributs)
-      .replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;')
-      // Nettoyer les attributs avec des valeurs contenant des caractères problématiques
-      .replace(/="([^"]*[<>&"'][^"]*)"/g, (match, value) => {
-        const cleaned = value
-          .replace(/</g, '&lt;')
-          .replace(/>/g, '&gt;')
-          .replace(/"/g, '&quot;')
-          .replace(/'/g, '&apos;');
-        return `="${cleaned}"`;
-      });
+      // Déséchapper les entités HTML communes si elles sont doublement échappées (cas rare)
+      .replace(/&amp;quot;/g, '&quot;')
+      .replace(/&amp;gt;/g, '&gt;')
+      .replace(/&amp;lt;/g, '&lt;')
+      .replace(/&amp;amp;/g, '&amp;')
+      // Échapper uniquement les & non échappés dans le contenu (pas dans les attributs)
+      .replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;');
     
     // Parser le XML Hektor avec gestion d'erreur améliorée
     let parsed;
@@ -66,31 +54,8 @@ export async function POST(request: NextRequest) {
         valueProcessors: []
       });
     } catch (parseError) {
-      console.error('Erreur parsing XML:', parseError);
-      // Log les lignes autour de l'erreur pour debug
-      const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown parse error';
-      const lineMatch = errorMsg.match(/Line:\s*(\d+)/);
-      const colMatch = errorMsg.match(/Column:\s*(\d+)/);
-      
-      let preview = cleanedXml.substring(0, 1000);
-      if (lineMatch) {
-        const lineNum = parseInt(lineMatch[1]);
-        const lines = cleanedXml.split('\n');
-        const start = Math.max(0, lineNum - 3);
-        const end = Math.min(lines.length, lineNum + 3);
-        preview = lines.slice(start, end).join('\n');
-      }
-      
-      console.error('Preview XML autour de l\'erreur:', preview);
-      return NextResponse.json(
-        { 
-          error: 'XML parsing failed', 
-          details: errorMsg,
-          preview: preview,
-          xmlLength: cleanedXml.length
-        }, 
-        { status: 400 }
-      );
+      console.error('Erreur de parsing XML:', parseError);
+      return NextResponse.json({ error: 'Invalid Hektor XML format' }, { status: 400 });
     }
     
     if (!parsed.hektor || !parsed.hektor.ad) {
@@ -162,32 +127,9 @@ export async function POST(request: NextRequest) {
 }
 
 function extractPropertyFromHektor(ad: any): any {
-  // Extraire l'ID et la clé mandat (gérer les attributs XML)
-  const idElement = ad.id;
-  let id = '';
-  let mandateKey = '';
-  
-  if (idElement) {
-    // Si c'est un objet avec attributs (nouveau format avec mandateKey en attribut)
-    if (typeof idElement === 'object' && !Array.isArray(idElement)) {
-      id = idElement._ || idElement[0] || '';
-      mandateKey = idElement.mandateKey || idElement._ || idElement[0] || '';
-    } else if (Array.isArray(idElement)) {
-      // Si c'est un tableau
-      const firstId = idElement[0];
-      if (typeof firstId === 'object') {
-        id = firstId._ || firstId[0] || '';
-        mandateKey = firstId.mandateKey || firstId._ || firstId[0] || '';
-      } else {
-        id = firstId || '';
-        mandateKey = firstId || '';
-      }
-    } else {
-      id = idElement || '';
-      mandateKey = idElement || '';
-    }
-  }
-  
+  // Extraire l'ID et la clé mandat
+  const id = ad.id?._ || ad.id?.[0] || '';
+  const mandateKey = ad.id?.mandateKey || ad.id?.[0] || '';
   const reference = ad.reference_client?.[0] || ad.reference?.[0] || '';
   
   // Mapper le statut Hektor vers votre statut
@@ -200,29 +142,12 @@ function extractPropertyFromHektor(ad: any): any {
   const hektorStatus = ad.status?.[0] || '2';
   const status = statusMap[hektorStatus] || 'a_vendre';
   
-  // Extraire les photos (gérer images et photos)
-  let photoUrls: string[] = [];
-  
-  // Nouveau format : <images><image>...</image></images>
-  if (ad.images?.[0]?.image) {
-    const images = ad.images[0].image;
-    const imageArray = Array.isArray(images) ? images : [images];
-    photoUrls = imageArray
-      .map((img: any) => {
-        if (typeof img === 'string') return img;
-        return img._ || img[0] || img;
-      })
-      .filter(Boolean);
-  }
-  
-  // Ancien format : <photos><photo>...</photo></photos>
-  if (photoUrls.length === 0 && ad.photos?.[0]?.photo) {
-    const photos = ad.photos[0].photo;
-    const photoArray = Array.isArray(photos) ? photos : [photos];
-    photoUrls = photoArray
-      .map((p: any) => typeof p === 'string' ? p : p._ || p.url || p)
-      .filter(Boolean);
-  }
+  // Extraire les photos
+  const photos = ad.photos?.[0]?.photo || [];
+  const photoArray = Array.isArray(photos) ? photos : [photos];
+  const photoUrls = photoArray
+    .map((p: any) => typeof p === 'string' ? p : p._ || p.url || p)
+    .filter(Boolean);
   
   // Extraire les prestations
   const prestations: any = {};
@@ -256,28 +181,14 @@ function extractPropertyFromHektor(ad: any): any {
     prestations.chauffage = 'gaz';
   }
   
-  // Localisation (gérer cp et code_postal)
+  // Localisation
   const ville = ad.ville?.[0] || '';
-  const cp = ad.cp?.[0] || ad.code_postal?.[0] || '';
+  const cp = ad.code_postal?.[0] || '';
   const location = ville && cp ? `${ville} ${cp}` : (ville || cp || 'Non spécifié');
-  
-  // Détecter le type d'offre (gérer type_offre et type_offre_code)
-  let typeOffreCode = '0';
-  if (ad.type_offre_code?.[0]) {
-    typeOffreCode = ad.type_offre_code[0];
-  } else if (ad.type_offre?.[0]) {
-    // Si type_offre contient "Vente", c'est une vente
-    const typeOffre = String(ad.type_offre[0]).toLowerCase();
-    if (typeOffre.includes('vente') || typeOffre === 'vente') {
-      typeOffreCode = '0';
-    } else {
-      typeOffreCode = '1'; // Location
-    }
-  }
   
   return {
     external_id: mandateKey || id || reference, // ID unique depuis Hektor
-    type_offre_code: typeOffreCode, // Pour le filtrage
+    type_offre_code: ad.type_offre_code?.[0] || ad.type_offre?.[0] || '0', // Pour le filtrage
     title: ad.titre?.[0] || 'Sans titre',
     price: parseFloat(ad.prix?.[0] || '0'),
     location: location,
@@ -285,12 +196,12 @@ function extractPropertyFromHektor(ad: any): any {
     photo_principale: photoUrls[0] || null,
     photos: photoUrls,
     beds: parseInt(ad.nb_pieces?.[0] || '0'),
-    baths: parseInt(ad.chambres?.[0] || ad.nb_chambres?.[0] || ad.sde?.[0] || ad.nb_sdb?.[0] || '0'),
-    area: parseInt(ad.surface_habitable?.[0] || ad.surface?.[0] || '0'),
+    baths: parseInt(ad.nb_chambres?.[0] || ad.nb_sdb?.[0] || '0'),
+    area: parseInt(ad.surface?.[0] || ad.surface_habitable?.[0] || '0'),
     description: ad.corps?.[0] || '',
     status: status,
     prestations: prestations,
-    surface_totale: parseFloat(ad.surface_habitable?.[0] || ad.surface?.[0] || '0') || null,
+    surface_totale: parseFloat(ad.surface?.[0] || ad.surface_habitable?.[0] || '0') || null,
     surface_terrasse: parseFloat(ad.surface_terrasse?.[0] || '0') || null,
     surface_balcon: parseFloat(ad.surface_balcon?.[0] || '0') || null,
     surface_cave: parseFloat(ad.surface_cave?.[0] || '0') || null,
