@@ -162,9 +162,32 @@ export async function POST(request: NextRequest) {
 }
 
 function extractPropertyFromHektor(ad: any): any {
-  // Extraire l'ID et la clé mandat
-  const id = ad.id?._ || ad.id?.[0] || '';
-  const mandateKey = ad.id?.mandateKey || ad.id?.[0] || '';
+  // Extraire l'ID et la clé mandat (gérer les attributs XML)
+  const idElement = ad.id;
+  let id = '';
+  let mandateKey = '';
+  
+  if (idElement) {
+    // Si c'est un objet avec attributs (nouveau format avec mandateKey en attribut)
+    if (typeof idElement === 'object' && !Array.isArray(idElement)) {
+      id = idElement._ || idElement[0] || '';
+      mandateKey = idElement.mandateKey || idElement._ || idElement[0] || '';
+    } else if (Array.isArray(idElement)) {
+      // Si c'est un tableau
+      const firstId = idElement[0];
+      if (typeof firstId === 'object') {
+        id = firstId._ || firstId[0] || '';
+        mandateKey = firstId.mandateKey || firstId._ || firstId[0] || '';
+      } else {
+        id = firstId || '';
+        mandateKey = firstId || '';
+      }
+    } else {
+      id = idElement || '';
+      mandateKey = idElement || '';
+    }
+  }
+  
   const reference = ad.reference_client?.[0] || ad.reference?.[0] || '';
   
   // Mapper le statut Hektor vers votre statut
@@ -177,12 +200,29 @@ function extractPropertyFromHektor(ad: any): any {
   const hektorStatus = ad.status?.[0] || '2';
   const status = statusMap[hektorStatus] || 'a_vendre';
   
-  // Extraire les photos
-  const photos = ad.photos?.[0]?.photo || [];
-  const photoArray = Array.isArray(photos) ? photos : [photos];
-  const photoUrls = photoArray
-    .map((p: any) => typeof p === 'string' ? p : p._ || p.url || p)
-    .filter(Boolean);
+  // Extraire les photos (gérer images et photos)
+  let photoUrls: string[] = [];
+  
+  // Nouveau format : <images><image>...</image></images>
+  if (ad.images?.[0]?.image) {
+    const images = ad.images[0].image;
+    const imageArray = Array.isArray(images) ? images : [images];
+    photoUrls = imageArray
+      .map((img: any) => {
+        if (typeof img === 'string') return img;
+        return img._ || img[0] || img;
+      })
+      .filter(Boolean);
+  }
+  
+  // Ancien format : <photos><photo>...</photo></photos>
+  if (photoUrls.length === 0 && ad.photos?.[0]?.photo) {
+    const photos = ad.photos[0].photo;
+    const photoArray = Array.isArray(photos) ? photos : [photos];
+    photoUrls = photoArray
+      .map((p: any) => typeof p === 'string' ? p : p._ || p.url || p)
+      .filter(Boolean);
+  }
   
   // Extraire les prestations
   const prestations: any = {};
@@ -216,14 +256,28 @@ function extractPropertyFromHektor(ad: any): any {
     prestations.chauffage = 'gaz';
   }
   
-  // Localisation
+  // Localisation (gérer cp et code_postal)
   const ville = ad.ville?.[0] || '';
-  const cp = ad.code_postal?.[0] || '';
+  const cp = ad.cp?.[0] || ad.code_postal?.[0] || '';
   const location = ville && cp ? `${ville} ${cp}` : (ville || cp || 'Non spécifié');
+  
+  // Détecter le type d'offre (gérer type_offre et type_offre_code)
+  let typeOffreCode = '0';
+  if (ad.type_offre_code?.[0]) {
+    typeOffreCode = ad.type_offre_code[0];
+  } else if (ad.type_offre?.[0]) {
+    // Si type_offre contient "Vente", c'est une vente
+    const typeOffre = String(ad.type_offre[0]).toLowerCase();
+    if (typeOffre.includes('vente') || typeOffre === 'vente') {
+      typeOffreCode = '0';
+    } else {
+      typeOffreCode = '1'; // Location
+    }
+  }
   
   return {
     external_id: mandateKey || id || reference, // ID unique depuis Hektor
-    type_offre_code: ad.type_offre_code?.[0] || ad.type_offre?.[0] || '0', // Pour le filtrage
+    type_offre_code: typeOffreCode, // Pour le filtrage
     title: ad.titre?.[0] || 'Sans titre',
     price: parseFloat(ad.prix?.[0] || '0'),
     location: location,
@@ -231,12 +285,12 @@ function extractPropertyFromHektor(ad: any): any {
     photo_principale: photoUrls[0] || null,
     photos: photoUrls,
     beds: parseInt(ad.nb_pieces?.[0] || '0'),
-    baths: parseInt(ad.nb_chambres?.[0] || ad.nb_sdb?.[0] || '0'),
-    area: parseInt(ad.surface?.[0] || ad.surface_habitable?.[0] || '0'),
+    baths: parseInt(ad.chambres?.[0] || ad.nb_chambres?.[0] || ad.sde?.[0] || ad.nb_sdb?.[0] || '0'),
+    area: parseInt(ad.surface_habitable?.[0] || ad.surface?.[0] || '0'),
     description: ad.corps?.[0] || '',
     status: status,
     prestations: prestations,
-    surface_totale: parseFloat(ad.surface?.[0] || ad.surface_habitable?.[0] || '0') || null,
+    surface_totale: parseFloat(ad.surface_habitable?.[0] || ad.surface?.[0] || '0') || null,
     surface_terrasse: parseFloat(ad.surface_terrasse?.[0] || '0') || null,
     surface_balcon: parseFloat(ad.surface_balcon?.[0] || '0') || null,
     surface_cave: parseFloat(ad.surface_cave?.[0] || '0') || null,
