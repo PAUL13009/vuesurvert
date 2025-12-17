@@ -36,32 +36,52 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Empty XML content' }, { status: 400 });
     }
     
-    // Nettoyer le XML de manière très agressive pour déséchapper toutes les entités
-    let cleanedXml = xmlContent
-      // Supprimer les caractères de contrôle d'abord
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
-      // Déséchapper les échappements JSON d'abord (\")
+    // Nettoyer le XML de manière très agressive pour déséchapper TOUTES les entités
+    // D'abord, supprimer les caractères de contrôle
+    let cleanedXml = xmlContent.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+    
+    // Déséchapper les échappements JSON (\")
+    cleanedXml = cleanedXml
       .replace(/\\"/g, '"')
       .replace(/\\'/g, "'")
       .replace(/\\>/g, '>')
-      .replace(/\\</g, '<');
+      .replace(/\\</g, '<')
+      .replace(/\\\\/g, '\\');
     
-    // Déséchapper les entités HTML communes de manière répétée jusqu'à ce qu'il n'y en ait plus
-    let previousLength = 0;
-    while (cleanedXml.length !== previousLength) {
-      previousLength = cleanedXml.length;
+    // Déséchapper TOUTES les entités HTML de manière répétée jusqu'à ce qu'il n'y en ait plus
+    // On fait une boucle pour gérer les cas d'échappement multiple avec sécurité
+    let iterations = 0;
+    let maxIterations = 10; // Sécurité pour éviter les boucles infinies
+    let changed = true;
+    
+    while (changed && iterations < maxIterations) {
+      const before = cleanedXml;
+      
+      // Déséchapper dans l'ordre : triple, double, simple
       cleanedXml = cleanedXml
+        // Triple échappement
+        .replace(/&amp;amp;amp;quot;/g, '"')
+        .replace(/&amp;amp;amp;gt;/g, '>')
+        .replace(/&amp;amp;amp;lt;/g, '<')
+        .replace(/&amp;amp;amp;amp;/g, '&')
+        // Double échappement
         .replace(/&amp;amp;quot;/g, '"')
         .replace(/&amp;amp;gt;/g, '>')
         .replace(/&amp;amp;lt;/g, '<')
         .replace(/&amp;amp;amp;/g, '&')
+        // Simple échappement
         .replace(/&amp;quot;/g, '"')
         .replace(/&amp;gt;/g, '>')
         .replace(/&amp;lt;/g, '<')
         .replace(/&amp;amp;/g, '&')
+        // Entités simples
         .replace(/&quot;/g, '"')
         .replace(/&gt;/g, '>')
-        .replace(/&lt;/g, '<');
+        .replace(/&lt;/g, '<')
+        .replace(/&apos;/g, "'");
+      
+      changed = (before !== cleanedXml);
+      iterations++;
     }
     
     // Échapper uniquement les & non échappés restants (pas dans les entités valides)
