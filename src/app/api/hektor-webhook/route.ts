@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseServer } from '@/lib/supabase/server';
-import { parseStringPromise } from 'xml2js';
+import { XMLParser } from 'fast-xml-parser';
 
 export async function POST(request: NextRequest) {
   try {
@@ -36,100 +36,42 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Empty XML content' }, { status: 400 });
     }
     
-    // Nettoyer le XML de manière très agressive pour déséchapper TOUTES les entités
-    // D'abord, supprimer les caractères de contrôle
-    let cleanedXml = xmlContent.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+    // Utiliser fast-xml-parser qui est beaucoup plus tolérant avec les XML mal formés
+    // Il gère automatiquement les entités échappées
+    const parser = new XMLParser({
+      ignoreAttributes: false,
+      attributeNamePrefix: '',
+      textNodeName: '_text',
+      ignoreNameSpace: false,
+      removeNSPrefix: false,
+      parseTagValue: true,
+      parseNodeValue: true,
+      parseTrueNumberOnly: false,
+      arrayMode: false,
+      trimValues: true,
+      processEntities: true, // Important : traite les entités automatiquement
+      htmlEntities: true, // Traite les entités HTML
+      alwaysCreateTextNode: false,
+      isArray: (name, jPath, isLeafNode, isAttribute) => {
+        // Retourner true pour les éléments qui doivent être des tableaux
+        if (name === 'ad') return true;
+        if (name === 'photo' || name === 'image') return true;
+        return false;
+      }
+    });
     
-    // Déséchapper les échappements JSON (\")
-    cleanedXml = cleanedXml
-      .replace(/\\"/g, '"')
-      .replace(/\\'/g, "'")
-      .replace(/\\>/g, '>')
-      .replace(/\\</g, '<')
-      .replace(/\\\\/g, '\\');
-    
-    // Déséchapper TOUTES les entités HTML de manière répétée jusqu'à ce qu'il n'y en ait plus
-    // On fait une boucle pour gérer les cas d'échappement multiple avec sécurité
-    let iterations = 0;
-    let maxIterations = 10; // Sécurité pour éviter les boucles infinies
-    let changed = true;
-    
-    while (changed && iterations < maxIterations) {
-      const before = cleanedXml;
-      
-      // Déséchapper dans l'ordre : triple, double, simple
-      cleanedXml = cleanedXml
-        // Triple échappement
-        .replace(/&amp;amp;amp;quot;/g, '"')
-        .replace(/&amp;amp;amp;gt;/g, '>')
-        .replace(/&amp;amp;amp;lt;/g, '<')
-        .replace(/&amp;amp;amp;amp;/g, '&')
-        // Double échappement
-        .replace(/&amp;amp;quot;/g, '"')
-        .replace(/&amp;amp;gt;/g, '>')
-        .replace(/&amp;amp;lt;/g, '<')
-        .replace(/&amp;amp;amp;/g, '&')
-        // Simple échappement
-        .replace(/&amp;quot;/g, '"')
-        .replace(/&amp;gt;/g, '>')
-        .replace(/&amp;lt;/g, '<')
-        .replace(/&amp;amp;/g, '&')
-        // Entités simples
-        .replace(/&quot;/g, '"')
-        .replace(/&gt;/g, '>')
-        .replace(/&lt;/g, '<')
-        .replace(/&apos;/g, "'");
-      
-      changed = (before !== cleanedXml);
-      iterations++;
-    }
-    
-    // Échapper uniquement les & non échappés restants (pas dans les entités valides)
-    cleanedXml = cleanedXml.replace(/&(?![a-zA-Z]+;|#\d+;|#x[0-9a-fA-F]+;)/g, '&amp;');
-    
-    // Parser le XML Hektor avec gestion d'erreur améliorée
     let parsed;
     try {
-      parsed = await parseStringPromise(cleanedXml, {
-        explicitArray: true,
-        mergeAttrs: true,
-        trim: true,
-        normalize: true,
-        explicitCharkey: false,
-        ignoreAttrs: false,
-        explicitRoot: true,
-        attrkey: '_',
-        charkey: '_',
-        // Options supplémentaires pour plus de tolérance
-        async: false,
-        attrNameProcessors: [],
-        attrValueProcessors: [],
-        tagNameProcessors: [],
-        valueProcessors: []
-      });
+      // fast-xml-parser peut parser même des XML avec des entités échappées
+      parsed = parser.parse(xmlContent);
     } catch (parseError) {
       console.error('Erreur parsing XML:', parseError);
-      // Log les lignes autour de l'erreur pour debug
       const errorMsg = parseError instanceof Error ? parseError.message : 'Unknown parse error';
-      const lineMatch = errorMsg.match(/Line:\s*(\d+)/);
-      const colMatch = errorMsg.match(/Column:\s*(\d+)/);
-      
-      let preview = cleanedXml.substring(0, 1000);
-      if (lineMatch) {
-        const lineNum = parseInt(lineMatch[1]);
-        const lines = cleanedXml.split('\n');
-        const start = Math.max(0, lineNum - 3);
-        const end = Math.min(lines.length, lineNum + 3);
-        preview = lines.slice(start, end).join('\n');
-      }
-      
-      console.error('Preview XML autour de l\'erreur:', preview);
       return NextResponse.json(
         { 
           error: 'XML parsing failed', 
           details: errorMsg,
-          preview: preview,
-          xmlLength: cleanedXml.length
+          preview: xmlContent.substring(0, 500)
         }, 
         { status: 400 }
       );
@@ -204,10 +146,46 @@ export async function POST(request: NextRequest) {
 }
 
 function extractPropertyFromHektor(ad: any): any {
-  // Extraire l'ID et la clé mandat
-  const id = ad.id?._ || ad.id?.[0] || '';
-  const mandateKey = ad.id?.mandateKey || ad.id?.[0] || '';
-  const reference = ad.reference_client?.[0] || ad.reference?.[0] || '';
+  // Helper pour extraire la valeur (gère _text, tableaux, strings)
+  const getValue = (field: any): string => {
+    if (!field) return '';
+    if (typeof field === 'string') return field;
+    if (Array.isArray(field)) {
+      const first = field[0];
+      if (typeof first === 'string') return first;
+      return first?._text || first || '';
+    }
+    return field._text || field || '';
+  };
+  
+  // Helper pour extraire un nombre
+  const getNumber = (field: any, defaultValue: number = 0): number => {
+    const value = getValue(field);
+    return parseInt(value) || defaultValue;
+  };
+  
+  // Helper pour extraire un float
+  const getFloat = (field: any, defaultValue: number = 0): number => {
+    const value = getValue(field);
+    return parseFloat(value) || defaultValue;
+  };
+  
+  // Extraire l'ID et la clé mandat (fast-xml-parser met les attributs directement sur l'objet)
+  const idElement = ad.id;
+  let id = '';
+  let mandateKey = '';
+  
+  if (idElement) {
+    if (typeof idElement === 'object') {
+      id = idElement._text || idElement || '';
+      mandateKey = idElement.mandateKey || idElement._text || idElement || '';
+    } else {
+      id = String(idElement);
+      mandateKey = String(idElement);
+    }
+  }
+  
+  const reference = getValue(ad.reference_client || ad.reference);
   
   // Mapper le statut Hektor vers votre statut
   const statusMap: Record<string, string> = {
@@ -216,38 +194,52 @@ function extractPropertyFromHektor(ad: any): any {
     '4': 'sous_compromis',  // Sous Compromis
     '5': 'vendu',  // Vendu
   };
-  const hektorStatus = ad.status?.[0] || '2';
+  const hektorStatus = getValue(ad.status) || '2';
   const status = statusMap[hektorStatus] || 'a_vendre';
   
-  // Extraire les photos
-  const photos = ad.photos?.[0]?.photo || [];
-  const photoArray = Array.isArray(photos) ? photos : [photos];
-  const photoUrls = photoArray
-    .map((p: any) => typeof p === 'string' ? p : p._ || p.url || p)
-    .filter(Boolean);
+  // Extraire les photos (gérer images et photos)
+  let photoUrls: string[] = [];
+  
+  // Nouveau format : <images><image>...</image></images>
+  if (ad.images?.image) {
+    const images = Array.isArray(ad.images.image) ? ad.images.image : [ad.images.image];
+    photoUrls = images
+      .map((img: any) => {
+        const url = getValue(img);
+        return url;
+      })
+      .filter(Boolean);
+  }
+  
+  // Ancien format : <photos><photo>...</photo></photos>
+  if (photoUrls.length === 0 && ad.photos?.photo) {
+    const photos = Array.isArray(ad.photos.photo) ? ad.photos.photo : [ad.photos.photo];
+    photoUrls = photos
+      .map((p: any) => getValue(p))
+      .filter(Boolean);
+  }
   
   // Extraire les prestations
   const prestations: any = {};
   
   // Parking/Garage
-  if (ad.nb_places_parking?.[0]) {
-    prestations.parking = parseInt(ad.nb_places_parking[0]) || 0;
-  }
-  if (ad.nb_places_garage?.[0]) {
-    prestations.garage = parseInt(ad.nb_places_garage[0]) || 0;
-  }
+  const parking = getNumber(ad.nb_places_parking);
+  if (parking > 0) prestations.parking = parking;
+  
+  const garage = getNumber(ad.nb_places_garage);
+  if (garage > 0) prestations.garage = garage;
   
   // Équipements
-  prestations.ascenseur = ad.ascenseur?.[0] === 'true' || ad.ascenseur?.[0] === '1';
-  prestations.balcon = ad.balcon?.[0] === 'true' || ad.balcon?.[0] === '1';
-  prestations.terrasse = ad.terrasse?.[0] === 'true' || ad.terrasse?.[0] === '1';
-  prestations.cave = ad.cave?.[0] === 'true' || ad.cave?.[0] === '1';
-  prestations.piscine = ad.piscine?.[0] === 'true' || ad.piscine?.[0] === '1';
-  prestations.jardin = ad.jardin?.[0] === 'true' || ad.jardin?.[0] === '1';
+  prestations.ascenseur = getValue(ad.ascenseur) === 'true' || getValue(ad.ascenseur) === '1';
+  prestations.balcon = getValue(ad.balcon) === 'true' || getValue(ad.balcon) === '1';
+  prestations.terrasse = getValue(ad.terrasse) === 'true' || getValue(ad.terrasse) === '1';
+  prestations.cave = getValue(ad.cave) === 'true' || getValue(ad.cave) === '1';
+  prestations.piscine = getValue(ad.piscine) === 'true' || getValue(ad.piscine) === '1';
+  prestations.jardin = getValue(ad.jardin) === 'true' || getValue(ad.jardin) === '1';
   
   // Chauffage
-  const formatChauffage = ad.format_chauffage?.[0] || '';
-  const energieChauffage = ad.energie_chauffage?.[0] || '';
+  const formatChauffage = getValue(ad.format_chauffage);
+  const energieChauffage = getValue(ad.energie_chauffage);
   if (formatChauffage.includes('INDIVIDUEL')) {
     prestations.chauffage = 'individuel';
   } else if (formatChauffage.includes('COLLECTIF')) {
@@ -258,33 +250,50 @@ function extractPropertyFromHektor(ad: any): any {
     prestations.chauffage = 'gaz';
   }
   
-  // Localisation
-  const ville = ad.ville?.[0] || '';
-  const cp = ad.code_postal?.[0] || '';
+  // Localisation (gérer cp et code_postal)
+  const ville = getValue(ad.ville);
+  const cp = getValue(ad.cp || ad.code_postal);
   const location = ville && cp ? `${ville} ${cp}` : (ville || cp || 'Non spécifié');
+  
+  // Détecter le type d'offre (gérer type_offre et type_offre_code)
+  let typeOffreCode = '0';
+  const typeOffreCodeValue = getValue(ad.type_offre_code);
+  const typeOffreValue = getValue(ad.type_offre);
+  
+  if (typeOffreCodeValue) {
+    typeOffreCode = typeOffreCodeValue;
+  } else if (typeOffreValue) {
+    // Si type_offre contient "Vente", c'est une vente
+    const typeOffre = String(typeOffreValue).toLowerCase();
+    if (typeOffre.includes('vente') || typeOffre === 'vente') {
+      typeOffreCode = '0';
+    } else {
+      typeOffreCode = '1'; // Location
+    }
+  }
   
   return {
     external_id: mandateKey || id || reference, // ID unique depuis Hektor
-    type_offre_code: ad.type_offre_code?.[0] || ad.type_offre?.[0] || '0', // Pour le filtrage
-    title: ad.titre?.[0] || 'Sans titre',
-    price: parseFloat(ad.prix?.[0] || '0'),
+    type_offre_code: typeOffreCode, // Pour le filtrage
+    title: getValue(ad.titre) || 'Sans titre',
+    price: getFloat(ad.prix),
     location: location,
     image: photoUrls[0] || '/placeholder.jpg',
     photo_principale: photoUrls[0] || null,
     photos: photoUrls,
-    beds: parseInt(ad.nb_pieces?.[0] || '0'),
-    baths: parseInt(ad.nb_chambres?.[0] || ad.nb_sdb?.[0] || '0'),
-    area: parseInt(ad.surface?.[0] || ad.surface_habitable?.[0] || '0'),
-    description: ad.corps?.[0] || '',
+    beds: getNumber(ad.nb_pieces),
+    baths: getNumber(ad.chambres || ad.nb_chambres || ad.sde || ad.nb_sdb),
+    area: getNumber(ad.surface_habitable || ad.surface),
+    description: getValue(ad.corps) || '',
     status: status,
     prestations: prestations,
-    surface_totale: parseFloat(ad.surface?.[0] || ad.surface_habitable?.[0] || '0') || null,
-    surface_terrasse: parseFloat(ad.surface_terrasse?.[0] || '0') || null,
-    surface_balcon: parseFloat(ad.surface_balcon?.[0] || '0') || null,
-    surface_cave: parseFloat(ad.surface_cave?.[0] || '0') || null,
-    surface_garage: parseFloat(ad.surface_garage?.[0] || '0') || null,
-    surface_jardin: parseFloat(ad.surface_jardin?.[0] || '0') || null,
-    dpe_consommation: ad.dpe_consommation?.[0] || null,
-    dpe_ges: ad.dpe_ges?.[0] || null,
+    surface_totale: getFloat(ad.surface_habitable || ad.surface) || null,
+    surface_terrasse: getFloat(ad.surface_terrasse) || null,
+    surface_balcon: getFloat(ad.surface_balcon) || null,
+    surface_cave: getFloat(ad.surface_cave) || null,
+    surface_garage: getFloat(ad.surface_garage) || null,
+    surface_jardin: getFloat(ad.surface_jardin) || null,
+    dpe_consommation: getValue(ad.dpe_consommation) || null,
+    dpe_ges: getValue(ad.dpe_ges) || null,
   };
 }
