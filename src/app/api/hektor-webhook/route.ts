@@ -21,12 +21,22 @@ export async function POST(request: NextRequest) {
 
     const xmlContent = await xmlFile.text();
     
-    // Nettoyer le XML de manière plus agressive pour déséchapper les entités
+    // Nettoyer le XML de manière très agressive pour déséchapper toutes les entités
     let cleanedXml = xmlContent
       // Supprimer les caractères de contrôle d'abord
       .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+      // Déséchapper les échappements JSON d'abord (\")
+      .replace(/\\"/g, '"')
+      .replace(/\\'/g, "'")
+      .replace(/\\>/g, '>')
+      .replace(/\\</g, '<')
       // Déséchapper les entités HTML communes (dans l'ordre inverse pour éviter les conflits)
-      // D'abord les entités doublement échappées
+      // D'abord les entités triplement échappées
+      .replace(/&amp;amp;quot;/g, '"')
+      .replace(/&amp;amp;gt;/g, '>')
+      .replace(/&amp;amp;lt;/g, '<')
+      .replace(/&amp;amp;amp;/g, '&')
+      // Ensuite les entités doublement échappées
       .replace(/&amp;quot;/g, '"')
       .replace(/&amp;gt;/g, '>')
       .replace(/&amp;lt;/g, '<')
