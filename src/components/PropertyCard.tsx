@@ -91,7 +91,7 @@ export default function PropertyCard({ property }: { property: Property }) {
         />
         {/* Badge de statut en haut à gauche */}
         <div 
-          className={`absolute top-4 left-4 ${statusInfo.bgColor} px-3 py-1.5 rounded text-white text-sm font-semibold z-10`}
+          className={`absolute top-3 left-3 sm:top-4 sm:left-4 ${statusInfo.bgColor} px-2.5 py-1 sm:px-3 sm:py-1.5 rounded text-white text-xs sm:text-sm font-semibold z-10`}
           style={statusInfo.useCustomColor ? { backgroundColor: "#00E09E" } : {}}
         >
           {statusInfo.label}
@@ -101,10 +101,10 @@ export default function PropertyCard({ property }: { property: Property }) {
       <div className="card-body">
         <div className="card-top flex items-center justify-between">
           <span className="city">{property.location}</span>
-          <span className="text-xl font-bold text-zinc-900">{formattedPrice}</span>
+          <span className="text-lg sm:text-xl font-bold text-zinc-900">{formattedPrice}</span>
         </div>
         
-        <h3 className="card-title">{property.title}</h3>
+        <h3 className="card-title text-base sm:text-lg">{property.title}</h3>
         
         <ul className="features">
           <li className="area">{property.area} m²</li>
@@ -114,7 +114,7 @@ export default function PropertyCard({ property }: { property: Property }) {
         
         <button
           onClick={handleButtonClick}
-          className="mt-4 w-full rounded-md px-4 py-2.5 text-center text-sm font-bold text-white transition-colors"
+          className="mt-4 w-full rounded-md px-4 py-3 sm:py-2.5 text-center text-sm font-bold text-white transition-colors"
           style={{ backgroundColor: "#00E09E" }}
           onMouseEnter={(e) => e.currentTarget.style.backgroundColor = "#00C08A"}
           onMouseLeave={(e) => e.currentTarget.style.backgroundColor = "#00E09E"}

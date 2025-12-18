@@ -51,15 +51,48 @@ export default async function PropertyDetailPage({ params }: PageProps) {
   const mainImage = prop.photo_principale || prop.photos?.[0] || prop.image;
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-7xl px-4 py-6 sm:py-8 sm:px-6 lg:px-8">
       <Link
         href="/"
-        className="mb-6 inline-flex items-center text-sm text-emerald-700 hover:text-emerald-800"
+        className="mb-4 sm:mb-6 inline-flex items-center text-xs sm:text-sm text-emerald-700 hover:text-emerald-800"
       >
         ← Retour à l'accueil
       </Link>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+      {/* Version mobile : structure verticale */}
+      <div className="block lg:hidden space-y-6">
+        {/* Titre */}
+        <div>
+          <h1 className="text-xl sm:text-2xl font-extrabold text-zinc-900">{prop.title}</h1>
+          <p className="mt-1 text-sm sm:text-base text-zinc-600">{prop.location}</p>
+          <p className="mt-2 text-xl sm:text-2xl font-semibold" style={{ color: "#00E09E" }}>
+            {new Intl.NumberFormat("fr-FR", {
+              style: "currency",
+              currency: "EUR",
+              maximumFractionDigits: 0,
+            }).format(prop.price)}
+          </p>
+        </div>
+
+        {/* Carrousel de photos */}
+        <PropertyImageGallery photos={photos} title={prop.title} />
+
+        {/* Description */}
+        {prop.description && (
+          <div className="max-w-2xl mx-auto text-center">
+            <h2 className="text-lg font-semibold text-zinc-900 mb-3">Description</h2>
+            <p className="text-sm sm:text-base text-zinc-700 whitespace-pre-line leading-relaxed">{prop.description}</p>
+          </div>
+        )}
+
+        {/* Informations */}
+        <div className="max-w-2xl mx-auto">
+          <PropertyInfoSection property={prop} />
+        </div>
+      </div>
+
+      {/* Version desktop : structure en 2 colonnes */}
+      <div className="hidden lg:grid grid-cols-1 gap-8 lg:grid-cols-2">
         {/* Colonne gauche : Image principale + Galerie + Information */}
         <div>
           <PropertyImageGallery photos={photos} title={prop.title} />

@@ -45,7 +45,7 @@ export default function HeroWithFilter({
   }, []);
 
   return (
-    <section className="relative min-h-[56vh] w-full overflow-hidden">
+    <section className="relative min-h-[50vh] sm:min-h-[56vh] w-full overflow-hidden">
       <Image
         src={backgroundUrl}
         alt=""
@@ -56,18 +56,18 @@ export default function HeroWithFilter({
         sizes="100vw"
       />
       <div className="absolute inset-0 bg-black/40" aria-hidden="true" />
-      <div className="relative mx-auto flex min-h-[56vh] max-w-7xl flex-col items-center justify-center px-4 sm:px-6 lg:px-8">
+      <div className="relative mx-auto flex min-h-[50vh] sm:min-h-[56vh] max-w-7xl flex-col items-center justify-center px-4 sm:px-6 lg:px-8 py-6 sm:py-0">
         <div 
-          className="text-center text-white -mt-24 transition-opacity duration-[1500ms] ease-out"
+          className="text-center text-white -mt-8 sm:-mt-24 transition-opacity duration-[1500ms] ease-out"
           style={{ opacity: titleOpacity }}
         >
-          <h1 className="text-2xl font-light tracking-normal sm:text-3xl md:text-4xl">{title}</h1>
+          <h1 className="text-lg sm:text-2xl font-light tracking-normal sm:text-3xl md:text-4xl px-2 leading-tight">{title}</h1>
           {subtitle ? (
-            <p className="mt-4 text-base sm:text-lg text-white/90">{subtitle}</p>
+            <p className="mt-2 sm:mt-4 text-xs sm:text-base text-white/90 px-2">{subtitle}</p>
           ) : null}
         </div>
         <div 
-          className="w-full transition-opacity duration-[1500ms] ease-out"
+          className="w-full mt-4 sm:mt-8 transition-opacity duration-[1500ms] ease-out"
           style={{ opacity: filterOpacity }}
         >
           <PropertyFilterBar onFilterChange={onFilterChange} />

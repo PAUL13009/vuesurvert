@@ -147,16 +147,16 @@ export default function PropertyInfoSection({ property }: PropertyInfoSectionPro
   }
 
   return (
-    <div className="mt-6">
-      <h2 className="text-xl font-semibold text-zinc-900 mb-4">Information</h2>
+    <div className="mt-0 lg:mt-6">
+      <h2 className="text-lg sm:text-xl font-semibold text-zinc-900 mb-4 text-center lg:text-left">Information</h2>
       
       {/* Navigation des onglets */}
-      <div className="flex gap-2 border-b border-zinc-200 mb-6">
+      <div className="flex gap-1 sm:gap-2 border-b border-zinc-200 mb-4 sm:mb-6 overflow-x-auto justify-center lg:justify-start">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 ${
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${
               activeTab === tab.id
                 ? "border-emerald-600 text-emerald-600"
                 : "border-transparent text-zinc-600 hover:text-zinc-900"
@@ -168,44 +168,44 @@ export default function PropertyInfoSection({ property }: PropertyInfoSectionPro
       </div>
 
       {/* Contenu des onglets */}
-      <div className="min-h-[200px]">
+      <div className="min-h-[150px] sm:min-h-[200px]">
         {activeTab === "prestation" && (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {prestationsList.length > 0 ? (
               prestationsList.map((item, index) => (
-                <div key={index} className="flex items-center justify-between py-3 border-b border-zinc-100">
-                  <span className="text-zinc-600">{item.label}</span>
-                  <span className="font-semibold text-zinc-900">{item.value}</span>
+                <div key={index} className="flex items-center justify-between py-2 sm:py-3 border-b border-zinc-100">
+                  <span className="text-xs sm:text-sm text-zinc-600">{item.label}</span>
+                  <span className="text-sm sm:text-base font-semibold text-zinc-900">{item.value}</span>
                 </div>
               ))
             ) : (
-              <p className="text-zinc-500 text-sm py-4">Aucune prestation renseignée</p>
+              <p className="text-zinc-500 text-xs sm:text-sm py-4">Aucune prestation renseignée</p>
             )}
           </div>
         )}
 
         {activeTab === "surfaces" && (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {surfacesList.length > 0 ? (
               surfacesList.map((item, index) => (
-                <div key={index} className="flex items-center justify-between py-3 border-b border-zinc-100">
-                  <span className="text-zinc-600">{item.label}</span>
-                  <span className="font-semibold text-zinc-900">{item.value}</span>
+                <div key={index} className="flex items-center justify-between py-2 sm:py-3 border-b border-zinc-100">
+                  <span className="text-xs sm:text-sm text-zinc-600">{item.label}</span>
+                  <span className="text-sm sm:text-base font-semibold text-zinc-900">{item.value}</span>
                 </div>
               ))
             ) : (
-              <p className="text-zinc-500 text-sm py-4">Aucune surface renseignée</p>
+              <p className="text-zinc-500 text-xs sm:text-sm py-4">Aucune surface renseignée</p>
             )}
           </div>
         )}
 
         {activeTab === "dpe" && (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {property.dpe_consommation ? (
-              <div className="flex items-center justify-between py-3 border-b border-zinc-100">
-                <span className="text-zinc-600">Consommation énergétique</span>
+              <div className="flex items-center justify-between py-2 sm:py-3 border-b border-zinc-100">
+                <span className="text-xs sm:text-sm text-zinc-600">Consommation énergétique</span>
                 <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-bold text-base sm:text-lg"
                   style={{ backgroundColor: getDpeColor(property.dpe_consommation) }}
                 >
                   {property.dpe_consommation}
@@ -213,10 +213,10 @@ export default function PropertyInfoSection({ property }: PropertyInfoSectionPro
               </div>
             ) : null}
             {property.dpe_ges ? (
-              <div className="flex items-center justify-between py-3 border-b border-zinc-100">
-                <span className="text-zinc-600">Émissions de GES</span>
+              <div className="flex items-center justify-between py-2 sm:py-3 border-b border-zinc-100">
+                <span className="text-xs sm:text-sm text-zinc-600">Émissions de GES</span>
                 <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-lg"
+                  className="w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-white font-bold text-base sm:text-lg"
                   style={{ backgroundColor: getDpeColor(property.dpe_ges) }}
                 >
                   {property.dpe_ges}
@@ -224,8 +224,8 @@ export default function PropertyInfoSection({ property }: PropertyInfoSectionPro
               </div>
             ) : null}
             {property.dpe_consommation ? (
-              <div className="py-3">
-                <p className="text-sm text-zinc-600 mb-2">Performance énergétique</p>
+              <div className="py-2 sm:py-3">
+                <p className="text-xs sm:text-sm text-zinc-600 mb-2">Performance énergétique</p>
                 <div className="w-full bg-zinc-200 rounded-full h-2">
                   <div
                     className="bg-emerald-600 h-2 rounded-full transition-all"
@@ -234,7 +234,7 @@ export default function PropertyInfoSection({ property }: PropertyInfoSectionPro
                 </div>
               </div>
             ) : (
-              <p className="text-zinc-500 text-sm py-4">DPE non renseigné</p>
+              <p className="text-zinc-500 text-xs sm:text-sm py-4">DPE non renseigné</p>
             )}
           </div>
         )}
